@@ -16,62 +16,63 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 
 # result file location
-RESULT='./result.txt'
+RESULT = './result.txt'
 
 # Client IP address
-CLIENT_ADDR=''
+CLIENT_ADDR = ''
 PORT = 8000
 
 # DC motor pin number
-EN=16 
-IN=[20,21]
+EN = 16
+IN = [20, 21]
 
 # Promixity sensor pin number
-PROMIXITY_SENSOR=24
+PROMIXITY_SENSOR = 24
 
 # Servo motor pin number
-SERVO_0=18
-SERVO_1=19
+SERVO_0 = 18
+SERVO_1 = 19
 
 GPIO.setmode(GPIO.BCM)
 
+
 # GUI
 
-class WindowClass(QtWidgets.QMainWindow) :
-    def __init__(self) :
+class WindowClass(QtWidgets.QMainWindow):
+    def __init__(self):
         super(WindowClass, self).__init__()
         uic.loadUi('ui/controller.ui', self)
-        
-        self.image=[]
-        
+
+        self.image = []
+
         self.buttonStart.clicked.connect(self.start)
         self.buttonStop.clicked.connect(self.cleanup)
         self.setRate(0)
-    
+
     def setImage(self, path):
         self.imageLabel.setPixmap(QtGui.QPixmap(path))
         self.imageLabel.repaint()
-    
+
     def setText(self, text):
         self.resultText.setText(text)
         self.resultText.repaint()
-    
+
     def setRate(self, rate):
         self.successRate.setValue(rate)
-    
+
     def start(self):
-        #ssh = get_ssh('your ip address', 'your port', 'your account', 'password')
-        #ssh_execute(ssh, 'python3 /home/kry-p/ProductRecongition_client/client_test.py', is_print=True)
-                
-        imagePath='./image.jpg'
+        # ssh = get_ssh('your ip address', 'your port', 'your account', 'password')
+        # ssh_execute(ssh, 'python3 'server script path'', is_print=True)
+
+        imagePath = './image.jpg'
         self.setRate(0)
-        
+
         # for calculating success rate
-        successCount=0
-        total=0
-        
+        successCount = 0
+        total = 0
+
         try:
-            count=0
+            count = 0
             camera = PiCamera()
             motor = Motor(EN, IN)
             promixity = Promixity(PROMIXITY_SENSOR)
@@ -79,73 +80,72 @@ class WindowClass(QtWidgets.QMainWindow) :
             servo2 = Servo(SERVO_1)
             servo1.reset()
             servo2.reset()
- 
+
             while True:
-                if promixity.check_object()==True:
-                    isSuccess=False
-                    total+=1
-                    
+                if promixity.check_object() == True:
+                    isSuccess = False
+                    total += 1
+
                     if checkFileExistence(RESULT):
                         os.remove(RESULT)
-                
+
                     servo1.reset()
                     servo2.reset()
-                
-                    count+=1
-                
-                    motor.MotorControl(100, "STOP")  
-                
-                    #camera.capture('./image'+str(count)+'.jpg')
+
+                    count += 1
+
+                    motor.MotorControl(100, "STOP")
+
+                    # camera.capture('./image'+str(count)+'.jpg')
                     camera.capture(imagePath)
                     time.sleep(1)
                     self.setImage(imagePath)
-                    
+
                     self.setText('사물이 감지되었습니다. 문자를 인식 중입니다.')
-                    
-                    while checkFileExistence(RESULT)==False:
+
+                    while not checkFileExistence(RESULT):
                         pass
-                
+
                     os.remove(imagePath)
                     motor.MotorControl(100, "FORWARD")
-                
-                    resultText=''
+
+                    resultText = ''
                     f = open(RESULT, 'r')
                     lines = f.readlines()
                     for line in lines:
                         resultText += line
                     f.close()
                     print(resultText)
-                    
+
                     self.setText(resultText)
-                    
-                    if resultText=='서울' or resultText=='경기' or resultText=='인천':
+
+                    if resultText == '서울' or resultText == '경기' or resultText == '인천':
                         servo1.angle1()
-                        isSuccess=True
-                    elif resultText=='충남' or resultText=='충북' or resultText=='대전':
+                        isSuccess = True
+                    elif resultText == '충남' or resultText == '충북' or resultText == '대전':
                         servo1.angle2()
-                        isSuccess=True
-                    elif resultText=='경남' or resultText=='경북' or resultText=='부산' or resultText=='울산' or resultText=='대구':
+                        isSuccess = True
+                    elif resultText == '경남' or resultText == '경북' or resultText == '부산' or resultText == '울산' or resultText == '대구':
                         servo2.angle1()
-                        isSuccess=True
-                    elif resultText=='전남' or resultText=='전북' or resultText=='광주' or resultText=='강원':
+                        isSuccess = True
+                    elif resultText == '전남' or resultText == '전북' or resultText == '광주' or resultText == '강원':
                         servo2.angle2()
-                        isSuccess=True
+                        isSuccess = True
                     else:
-                        isSuccess=False
-                    
-                    if isSuccess==True:
-                        successCount+=1
-                    
-                    successRate=int(successCount/total*100)
-                    
+                        isSuccess = False
+
+                    if isSuccess == True:
+                        successCount += 1
+
+                    successRate = int(successCount / total * 100)
+
                     self.setRate(successRate)
-                    
+
                     print(successRate)
-                    
-                    
+
                     os.remove(RESULT)
                     time.sleep(10)
-                
+
                 else:
                     self.setText('사물을 감지하고 있습니다.')
                     motor.MotorControl(100, "FORWARD")
@@ -154,7 +154,7 @@ class WindowClass(QtWidgets.QMainWindow) :
                     servo2.reset()
         except KeyboardInterrupt:
             print("Exception : Keyboard interrupt detected")
-   
+
         finally:
             print("Shutdown")
             servo1.reset()
@@ -162,7 +162,7 @@ class WindowClass(QtWidgets.QMainWindow) :
             servo1.off()
             servo2.off()
             GPIO.cleanup()
-            
+
     def cleanup(self):
         print("Shutdown")
         servo1.reset()
@@ -180,67 +180,71 @@ def checkFileExistence(fileName):
     else:
         return False
 
+
 # control servo motor
 class Servo():
-    def __init__(self,PIN):
-        self.Servo=PiGPIO.pi()
-        self.PIN=PIN
-        self.Servo.set_servo_pulsewidth(self.PIN, 0) # initialization
-    
+    def __init__(self, PIN):
+        self.Servo = PiGPIO.pi()
+        self.PIN = PIN
+        self.Servo.set_servo_pulsewidth(self.PIN, 0)  # initialization
+
     def reset(self):
-        self.Servo.set_servo_pulsewidth(self.PIN, 500) #reset servo motor
-        
+        self.Servo.set_servo_pulsewidth(self.PIN, 500)  # reset servo motor
+
     def off(self):
-        self.Servo.set_servo_pulsewidth(self.PIN, 0) # turn off servo motor
-        
+        self.Servo.set_servo_pulsewidth(self.PIN, 0)  # turn off servo motor
+
     def angle1(self):
-        self.Servo.set_servo_pulsewidth(self.PIN, 1000) # set servo motor position to angle 1
-        
+        self.Servo.set_servo_pulsewidth(self.PIN, 1000)  # set servo motor position to angle 1
+
     def angle2(self):
-        self.Servo.set_servo_pulsewidth(self.PIN, 1600) # set servo motor position to angle 2
+        self.Servo.set_servo_pulsewidth(self.PIN, 1600)  # set servo motor position to angle 2
+
 
 # check object
 class Promixity():
     def __init__(self, PIN):
         GPIO.setup(PIN, GPIO.IN)
-        self.PIN=PIN
-        self.CHECK_ON=0
-        
+        self.PIN = PIN
+        self.CHECK_ON = 0
+
     def check_object(self):
-        if GPIO.input(self.PIN)==self.CHECK_ON:
+        if GPIO.input(self.PIN) == self.CHECK_ON:
             return True
         else:
             return False
+
 
 # control DC motor
 class Motor():
     def __init__(self, EN, IN):
         GPIO.setup(IN, GPIO.OUT)
         GPIO.setup(EN, GPIO.OUT)
-        
+
         self.IN = IN
         self.pwm = GPIO.PWM(EN, 100)
         self.pwm.start(0)
-       
+
     def MotorControl(self, speed, stat):
         self.pwm.ChangeDutyCycle(speed)
 
-        if stat == 1 or stat == "FORWARD": # forward:
+        if stat == 1 or stat == "FORWARD":  # forward:
             GPIO.output(self.IN[0], GPIO.HIGH)
             GPIO.output(self.IN[1], GPIO.LOW)
-           
-        elif stat == 0 or stat == "STOP": # stop        
+
+        elif stat == 0 or stat == "STOP":  # stop
             GPIO.output(self.IN[0], GPIO.LOW)
             GPIO.output(self.IN[1], GPIO.LOW)
-           
-        elif stat == -1 or stat == "BACKWARD": # backward
+
+        elif stat == -1 or stat == "BACKWARD":  # backward
             GPIO.output(self.IN[0], GPIO.LOW)
             GPIO.output(self.IN[1], GPIO.HIGH)
-           
-        else:    
+
+        else:
             GPIO.output(self.IN[0], LOW)
             GPIO.output(self.IN[1], LOW)
             print("motor stat err. stat:", stat)
+
 
 # SSH and SFTP control for paramiko
 # Original Code
@@ -314,6 +318,7 @@ def directory_upload(sftp, src_directory, dest_directory):
             print(e)
             raise e
 
+
 # ssh communication
 
 # ssh 명령을 수행한다.
@@ -342,6 +347,7 @@ def ssh_execute(ssh, command, is_print=True):
 
     return int(exit_status)
 
+
 def get_ssh(host_ip, port, id, pw):
     try:
         # ssh client 생성
@@ -358,6 +364,7 @@ def get_ssh(host_ip, port, id, pw):
 
     return ssh
 
+
 def get_sftp(ssh):
     try:
         sftp = paramiko.SFTPClient.from_transport(ssh.get_transport())
@@ -366,11 +373,14 @@ def get_sftp(ssh):
         raise e
     return sftp
 
+
 def close_ssh(ssh):
     ssh.close()
 
+
 def close_sftp(sftp):
     sftp.close()
+
 
 def checkFileExistence(fileName):
     if os.path.exists(fileName):
@@ -378,11 +388,11 @@ def checkFileExistence(fileName):
     else:
         return False
 
+
 # main
 
-if __name__=="__main__":
-    app = QApplication(sys.argv) 
-    myWindow = WindowClass() 
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    myWindow = WindowClass()
     myWindow.show()
     app.exec_()
-    
