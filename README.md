@@ -1,6 +1,7 @@
 # ProductIdentifier
 <p>
-   <img src="https://img.shields.io/badge/Python-%3E%203.x-blue?style=flat-square&logo=python"/>&nbsp
+   <img src="https://img.shields.io/badge/backend-Python%203.x-%233776AB?style=flat-square&logo=python"/>&nbsp
+   <img src="https://img.shields.io/badge/frontend-Qt-%2341CD52?style=flat-square&logo=qt"/>&nbsp
 </p>   
 
 ICT 융합 프로젝트의 일환으로 개발한 상품 분류기입니다.
